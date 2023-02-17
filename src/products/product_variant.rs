@@ -1,41 +1,66 @@
 #![allow(unused)]
 
+use crate::{
+    common::{Id, Money},
+    utils::{run_query, ResponseTypes, ShopifyConfig, ShopifyResult},
+};
 use serde::Deserialize;
 
-use super::Product;
-use crate::common::{Id, InventoryItem, Money, WeightUnit};
-
-/// Represents a product variant.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ProductVariant {
-    /// A globally-unique identifier.
     id: Id,
-
-    /// The compare-at price of the variant in the default shop currency.
     compare_at_price: Option<Money>,
+}
 
-    /// The inventory item, which is used to query for inventory information.
-    inventory_item: InventoryItem,
+impl ProductVariant {
+    pub(crate) fn from_query(id: Id) -> ProductVariantQueryBuilder {
+        let mut fields = Vec::new();
+        fields.push("id".into());
 
-    /// The total sellable quantity of the variant.
-    inventory_quantity: Option<i32>,
+        ProductVariantQueryBuilder { id, fields }
+    }
 
-    /// The price of the product variant in the default shop currency.
-    price: Money,
+    pub(crate) fn id(&self) -> &Id {
+        &self.id
+    }
 
-    /// The product that this variant belongs to.
-    product: Box<Product>,
+    pub(crate) fn compare_at_price(&self) -> Option<&Money> {
+        self.compare_at_price.as_ref()
+    }
+}
 
-    /// An identifier for the product variant in the shop. Required in order to connect to a fulfillment service.
-    sku: Option<String>,
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ProductVariantQueryBuilder {
+    id: Id,
+    fields: Vec<String>,
+}
 
-    /// The title of the product variant.
-    title: String,
+impl ProductVariantQueryBuilder {
+    // pub(crate) async fn build(self, config: ShopifyConfig) -> ShopifyResult<ProductVariant> {
+    //     let fields = self.fields.join("\n,");
+    //
+    //     let query = format!(
+    //         "query {{ product(id: \"{}\") {{ {} }} }}",
+    //         self.id.inner(),
+    //         fields
+    //     );
+    //
+    //     let res = run_query(config, query).await?;
+    //     match res.data {
+    //         ResponseTypes::ProductVariant(v) => Ok(v),
+    //
+    //         _ => unreachable!(), // FIX: Replace this with an Error
+    //     }
+    // }
 
-    /// The weight of the product variant in the unit system specified with weight_unit.
-    weight: Option<f32>,
+    pub(crate) fn compare_at_price(mut self) -> Self {
+        self.fields.push("compareAtPrice".into());
+        self
+    }
 
-    /// The unit of measurement that applies to the product variant's weight.
-    weight_unit: WeightUnit,
+    pub(crate) fn fields(&self) -> &[String] {
+        self.fields.as_ref()
+    }
 }

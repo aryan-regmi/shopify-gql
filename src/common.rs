@@ -1,89 +1,83 @@
 #![allow(unused)]
 
+use crate::utils::{ShopifyGqlError, ShopifyResult};
 use serde::Deserialize;
 
-use crate::products::ProductVariant;
-
-/// A globally-unique identifier.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Id(String);
+
 impl Id {
-    pub(crate) fn product(id: &str) -> Self {
-        let id = format!("gid://shopify/Product/{id}");
+    fn is_numeric(id: &str) -> bool {
+        let mut ret = true;
+        for c in id.chars() {
+            match c {
+                '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' => continue,
 
-        Self(id)
+                _ => return false,
+            }
+        }
+
+        ret
     }
 
-    pub(crate) fn product_variant(id: &str) -> Self {
-        let id = format!("gid://shopify/ProductVariant/{id}");
+    pub(crate) fn product(id: &str) -> ShopifyResult<Self> {
+        // Validate input (must be numbers only)
+        if !Id::is_numeric(id) {
+            return Err(ShopifyGqlError::InvalidId(id.into()));
+        }
 
-        Self(id)
+        Ok(Self(format!("gid://shopify/Product/{}", id)))
     }
 
-    pub(crate) fn as_str(&self) -> &str {
+    pub(crate) fn product_variant(id: &str) -> ShopifyResult<Self> {
+        // Validate input (must be numbers only)
+        if !Id::is_numeric(id) {
+            return Err(ShopifyGqlError::InvalidId(id.into()));
+        }
+
+        Ok(Self(format!("gid://shopify/ProductVariant/{}", id)))
+    }
+
+    pub(crate) fn inner(&self) -> &String {
         &self.0
     }
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct Money(String);
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", try_from = "String")]
+pub(crate) struct Money(pub f64);
 
-/// The three-letter currency codes that represent the world currencies used in stores.
-#[derive(Debug, Deserialize)]
-enum CurrencyCode {
-    /// Canadian Dollars (CAD).
-    CAD,
+impl TryFrom<String> for Money {
+    type Error = ShopifyGqlError;
 
-    /// United Kingdom Pounds (GBP).
-    GBP,
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let v: f64 = value
+            .parse()
+            .map_err(|_| ShopifyGqlError::FloatParseError(value))?;
 
-    /// United States Dollars (USD).
-    USD,
+        Ok(Money(v))
+    }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct MoneyV2 {
-    /// Decimal money amount.
-    amount: f64,
-
-    /// Currency of the money.
-    currency_code: CurrencyCode,
+pub(crate) struct Node<T> {
+    node: T,
 }
 
-/// Represents the goods available to be shipped to a customer.
-/// It holds essential information about the goods, including SKU and whether it is tracked.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct InventoryItem {
-    /// A globally-unique identifier.
-    id: Id,
-
-    /// Inventory item SKU.
-    sku: Option<String>,
-
-    /// Unit cost associated with the inventory item.
-    /// Note: the user must have "View product costs" permission granted in
-    /// order to access this field once product granular permissions are enabled.
-    unit_cost: Option<MoneyV2>,
-
-    /// The variant that owns this inventory item.
-    variant: Box<ProductVariant>,
+pub(crate) struct Edges<T> {
+    edges: Vec<Node<T>>,
 }
 
-#[derive(Debug, Deserialize)]
-pub(crate) enum WeightUnit {
-    /// Metric system unit of mass.
-    GRAMS,
+impl<T> Edges<T> {
+    pub(crate) fn to_inner_vec(&self) -> Vec<&T> {
+        self.edges.iter().map(|e| &e.node).collect()
+    }
 
-    /// 1 kilogram equals 1000 grams.
-    KILOGRAMS,
-
-    /// Imperial system unit of mass.
-    OUNCES,
-
-    /// 1 pound equals 16 ounces.
-    POUNDS,
+    pub(crate) fn get_node(&self, idx: usize) -> &T {
+        &self.edges[idx].node
+    }
 }

@@ -9,7 +9,7 @@ use serde::Deserialize;
 use std::env::{self, VarError};
 use thiserror::Error;
 
-use crate::products::{Product, ProductResponse, ProductVariant};
+use crate::products::{product::Product, product_variant::ProductVariant};
 
 #[derive(Debug, Error)]
 pub(crate) enum ShopifyGqlError {
@@ -24,6 +24,12 @@ pub(crate) enum ShopifyGqlError {
 
     #[error("Unable to parse response: {0}")]
     ResponseError(String),
+
+    #[error("Invalid ID ({0}): The ID must only be numbers")]
+    InvalidId(String),
+
+    #[error("Unable to parse {0} as float")]
+    FloatParseError(String),
 }
 
 pub(crate) type ShopifyResult<T> = Result<T, ShopifyGqlError>;
@@ -87,40 +93,16 @@ impl ShopifyConfig {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase", rename = "data")]
-/// The various types of responses a query can result in.
+#[serde(rename_all = "camelCase")]
 pub(crate) enum ResponseTypes {
-    /// Response returning a Shopify `Product`.
-    // Product(Product),
-    Product(ProductResponse),
-    // /// Response returning a Shopify `ProductVariant`.
-    // ProductVariant(ProductVariant),
-    // /// Response returning a list of Shopify `Product`s.
-    // Products(NodeList<Product>),
-    //
-    // /// Response returning a list of Shopify `ProductVariant`s.
-    // Variants(NodeList<ProductVariant>),
-    //
-    // /// Response for a `BulkOperationRunQuery`.
-    // BulkOperationRunQuery(BulkOperationRunQuery),
-    //
-    // /// Response for a `CurrentBulkOperation` query.
-    // /// Holds info about the currently running bulk query.
-    // CurrentBulkOperation(BulkOperation),
-    //
-    // /// Response for a `ProductVariantUpdate` query, which returns a [Product].
-    // ProductVariantUpdate(Box<ResponseTypes>),
+    Product(Product),
+    ProductVariant(ProductVariant),
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase", untagged)]
-/// The most basic/top-level type in the query response.
-pub(crate) enum QueryResponse {
-    /// Represents all non-error responses.
-    Data { data: ResponseTypes },
-
-    /// Represents any errors.
-    Errors(serde_json::Value),
+#[serde(rename_all = "camelCase")]
+pub(crate) struct QueryResponse {
+    pub(crate) data: ResponseTypes,
 }
 
 pub(crate) async fn run_query(
@@ -138,10 +120,7 @@ pub(crate) async fn run_query(
     let res = client.post(url).headers(headers).body(query).send().await?;
     let ret: Result<QueryResponse, _> = res.json().await;
     let ret = match ret {
-        Ok(r) => {
-            dbg!(&r);
-            Ok(r)
-        }
+        Ok(r) => Ok(r),
         Err(e) => Err(ShopifyGqlError::ResponseError(format!(
             "Unable to parse response: {}",
             e

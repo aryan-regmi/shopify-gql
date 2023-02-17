@@ -1,250 +1,141 @@
 #![allow(unused)]
 
+use crate::{
+    common::{Edges, Id, Node},
+    utils::{run_query, ResponseTypes, ShopifyConfig, ShopifyResult},
+};
 use serde::Deserialize;
 
-use crate::{
-    common::{Id, InventoryItem, Money, WeightUnit},
-    utils::{
-        run_query, QueryResponse, ResponseTypes, ShopifyConfig, ShopifyGqlError, ShopifyResult,
-    },
-};
-use std::collections::HashMap;
+use super::product_variant::{ProductVariant, ProductVariantQueryBuilder};
 
-use super::ProductVariant;
-
-/// The possible product statuses.
-#[derive(Debug, Deserialize)]
-enum ProductStatus {
+#[derive(Debug, Deserialize, PartialEq)]
+pub(crate) enum ProductStatus {
     /// The product is ready to sell and can be published to sales channels and apps.
-    /// Products with an active status aren't automatically published to sales channels,
-    /// such as the online store, or apps. By default, existing products are set to active.
     ACTIVE,
 
-    /// The product is no longer being sold and isn't available to customers on sales
-    /// channels and apps.
+    /// The product is no longer being sold and isn't available to customers on sales channels and apps.
     ARCHIVED,
 
-    /// The product isn't ready to sell and is unavailable to customers on sales
-    /// channels and apps. By default, duplicated and unarchived products are set to draft.
+    /// The product isn't ready to sell and is unavailable to customers on sales channels and apps.
     DRAFT,
 }
 
-/// The Product resource lets you manage products in a merchant’s store
+// NOTE: Need to update `ProductQueryBuilder` anytime a field is added/changed.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Product {
-    /// A globally-unique identifier.
     id: Id,
 
-    /// The product type specified by the merchant.
-    product_type: String,
+    title: Option<String>,
 
-    /// The product status. This controls visibility across all channels.
-    status: ProductStatus,
+    status: Option<ProductStatus>,
 
-    /// A comma separated list of tags associated with the product
-    tags: Vec<String>,
+    vendor: Option<String>,
 
-    /// The title of the product.
-    title: String,
-
-    /// The quantity of inventory in stock.
-    total_inventory: i32,
-
-    /// The number of variants that are associated with the product.
-    total_variants: i32,
-
-    /// The name of the product's vendor.
-    vendor: String,
-    // /// A list of variants associated with the product.
-    // variants: Vec<ProductVariant>,
+    variants: Option<Edges<ProductVariant>>,
 }
 
 impl Product {
-    fn from_query(id: Id) -> ProductQueryBuilder {
-        ProductQueryBuilder {
-            id,
-            fields: HashMap::new(),
-        }
+    pub(crate) fn from_query(id: Id) -> ProductQueryBuilder {
+        let mut fields = Vec::new();
+        fields.push("id".into());
+
+        ProductQueryBuilder { id, fields }
+    }
+
+    pub(crate) fn id(&self) -> &Id {
+        &self.id
+    }
+
+    pub(crate) fn status(&self) -> Option<&ProductStatus> {
+        self.status.as_ref()
+    }
+
+    pub(crate) fn vendor(&self) -> Option<&String> {
+        self.vendor.as_ref()
+    }
+
+    pub(crate) fn title(&self) -> Option<&String> {
+        self.title.as_ref()
+    }
+
+    pub(crate) fn variants(&self) -> Option<&Edges<ProductVariant>> {
+        self.variants.as_ref()
     }
 }
 
-struct ProductQueryBuilder {
+// NOTE: This needs to be updated anytime a new field is added to `Product`.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ProductQueryBuilder {
     id: Id,
-    fields: HashMap<String, String>,
+    fields: Vec<String>,
 }
 
-// TODO: Add actual values in the HashMaps
 impl ProductQueryBuilder {
-    fn product_type(mut self) -> Self {
-        let key = "productType".into();
-        let value = "productType".into();
-        self.fields.insert(key, value);
+    pub(crate) fn status(mut self) -> Self {
+        self.fields.push("status".into());
         self
     }
 
-    fn status(mut self) -> Self {
-        let key = "status".into();
-        let value = "status".into();
-        self.fields.insert(key, value);
+    pub(crate) fn vendor(mut self) -> Self {
+        self.fields.push("vendor".into());
         self
     }
 
-    fn tags(mut self) -> Self {
-        let key = "tags".into();
-        let value = "tags".into();
-        self.fields.insert(key, value);
+    pub(crate) fn title(mut self) -> Self {
+        self.fields.push("title".into());
         self
     }
 
-    fn title(mut self) -> Self {
-        let key = "title".into();
-        let value = "title".into();
-        self.fields.insert(key, value);
+    pub(crate) fn variants(
+        mut self,
+        first: usize,
+        variants_query: ProductVariantQueryBuilder,
+    ) -> Self {
+        let var_str = format!(
+            "variants(first: {}) {{ edges {{ node {{ {} }} }} }}",
+            first,
+            variants_query.fields().join("\n,")
+        );
+
+        self.fields.push(var_str);
         self
     }
 
-    fn total_inventory(mut self) -> Self {
-        let key = "totalInventory".into();
-        let value = "totalInventory".into();
-        self.fields.insert(key, value);
-        self
-    }
+    pub(crate) async fn build(self, config: ShopifyConfig) -> ShopifyResult<Product> {
+        let fields = self.fields.join("\n,");
 
-    fn total_variants(mut self) -> Self {
-        let key = "totalVariants".into();
-        let value = "totalVariants".into();
-        self.fields.insert(key, value);
-        self
-    }
-
-    fn vendor(mut self) -> Self {
-        let key = "vendor".into();
-        let value = "vendor".into();
-        self.fields.insert(key, value);
-        self
-    }
-
-    async fn build(self, config: ShopifyConfig) -> ShopifyResult<Product> {
-        let fields = self.fields.into_values().map(|k| k).collect::<Vec<_>>();
-        let fields = fields.join(",\n");
-
-        // Build query
         let query = format!(
             "query {{ product(id: \"{}\") {{ {} }} }}",
-            self.id.as_str(),
+            self.id.inner(),
             fields
         );
 
-        // Run query
-        let prod_res = run_query(config, query).await?;
-        match prod_res {
-            QueryResponse::Data { data } => match data {
-                ResponseTypes::Product(p) => {
-                    dbg!(&p);
-                    Ok(p.to_product())
-                    // Ok(p)
-                }
-            },
-            QueryResponse::Errors(e) => Err(ShopifyGqlError::ResponseError(format!(
-                "Invalid Product was returned: {}",
-                e.to_string()
-            ))),
-        }
-    }
-}
+        let res = run_query(config, query).await?;
+        match res.data {
+            ResponseTypes::Product(p) => Ok(p),
 
-/// The Product resource lets you manage products in a merchant’s store
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase", rename = "product")]
-pub(crate) struct ProductResponse {
-    /// A globally-unique identifier.
-    id: Id,
-
-    /// The product type specified by the merchant.
-    product_type: Option<String>,
-
-    /// The product status. This controls visibility across all channels.
-    status: ProductStatus,
-
-    /// A comma separated list of tags associated with the product
-    tags: Vec<String>,
-
-    /// The title of the product.
-    title: Option<String>,
-
-    /// The quantity of inventory in stock.
-    total_inventory: Option<String>,
-
-    /// The number of variants that are associated with the product.
-    total_variants: Option<String>,
-
-    /// The name of the product's vendor.
-    vendor: Option<String>,
-    // /// A list of variants associated with the product.
-    // variants: Vec<ProductVariant>,
-}
-
-impl ProductResponse {
-    fn to_product(self) -> Product {
-        let id = self.id;
-        let product_type = match self.product_type {
-            Some(p) => p,
-            None => "".into(),
-        };
-        let status = self.status;
-        let tags = self.tags;
-        let title = match self.title {
-            Some(t) => t,
-            None => "".into(),
-        };
-        let total_inventory = match self.total_inventory {
-            Some(i) => i.parse().unwrap(),
-            None => 0,
-        };
-        let total_variants = match self.total_variants {
-            Some(v) => v.parse().unwrap(),
-            None => 0,
-        };
-        let vendor = match self.vendor {
-            Some(v) => v,
-            None => "".into(),
-        };
-
-        Product {
-            id,
-            product_type,
-            status,
-            tags,
-            title,
-            total_inventory,
-            total_variants,
-            vendor,
+            _ => unreachable!(), // FIX: Replace this with an Error
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::ShopifyGqlError;
 
     use super::*;
 
-    #[tokio::test]
-    async fn tst() -> Result<(), ShopifyGqlError> {
-        let prod = Product::from_query(Id::product("7395184804017"))
-            // .product_type()
-            // .vendor()
-            // .total_variants()
-            // .total_inventory()
-            // .tags()
-            // .status()
-            .title()
-            .build(ShopifyConfig::from_env()?)
-            .await?;
+    #[test]
+    fn can_create_id() {
+        let id1 = Id::product("1235").unwrap();
+        assert_eq!(id1.inner(), "gid://shopify/Product/1235");
 
-        dbg!(prod);
+        let id2 = Id::product("abcd").unwrap_err();
 
-        Ok(())
+        assert_eq!(
+            id2.to_string(),
+            "Invalid ID (abcd): The ID must only be numbers"
+        )
     }
 }

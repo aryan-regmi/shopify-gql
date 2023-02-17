@@ -1,5 +1,3 @@
-mod product;
-pub(crate) use product::{Product, ProductResponse};
+pub(crate) mod product;
 
-mod product_variant;
-pub(crate) use product_variant::ProductVariant;
+pub(crate) mod product_variant;
