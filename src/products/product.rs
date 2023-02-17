@@ -119,6 +119,10 @@ impl ProductQueryBuilder {
             _ => unreachable!(), // FIX: Replace this with an Error
         }
     }
+
+    pub(crate) fn fields(&self) -> &[String] {
+        self.fields.as_ref()
+    }
 }
 
 #[cfg(test)]

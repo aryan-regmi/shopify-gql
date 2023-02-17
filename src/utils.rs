@@ -118,6 +118,9 @@ pub(crate) async fn run_query(
     let url = config.api_url;
 
     let res = client.post(url).headers(headers).body(query).send().await?;
+    // dbg!(res.text().await?);
+    // todo!()
+
     let ret: Result<QueryResponse, _> = res.json().await;
     let ret = match ret {
         Ok(r) => Ok(r),

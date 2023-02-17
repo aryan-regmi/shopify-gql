@@ -61,6 +61,14 @@ impl TryFrom<String> for Money {
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
+pub(crate) enum WeightUnit {
+    GRAMS,
+    KILOGRAMS,
+    OUNCES,
+    POUNDS,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Node<T> {
     node: T,
