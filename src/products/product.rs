@@ -59,13 +59,20 @@ impl Product {
     }
 }
 
+/// All possible queries and mutations on a `Product`.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum ProductQueryType {
+    Product,
+}
+
 // NOTE: This needs to be updated anytime a new field is added to `Product`.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ProductQueryBuilder {
     id: Id,
     fields: Vec<String>,
-    query_type: String,
+    query_type: ProductQueryType,
 }
 
 impl ProductQueryBuilder {
@@ -73,7 +80,7 @@ impl ProductQueryBuilder {
         let mut fields = Vec::new();
         fields.push("id".into());
 
-        let query_type = format!("product(id: \"{}\")", id.inner());
+        let query_type = ProductQueryType::Product;
 
         ProductQueryBuilder {
             id,
@@ -115,7 +122,15 @@ impl ProductQueryBuilder {
     pub(crate) async fn build(self, config: ShopifyConfig) -> ShopifyResult<Product> {
         let fields = self.fields.join("\n,");
 
-        let query = format!("query {{ {} {{ {} }} }}", self.query_type, fields);
+        let query = match self.query_type {
+            ProductQueryType::Product => {
+                format!(
+                    "query {{ product(id: \"{}\") {{ {} }} }}",
+                    self.id.inner(),
+                    fields
+                )
+            }
+        };
 
         let res = run_query(config, query).await?;
         match res.data {

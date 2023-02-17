@@ -6,7 +6,10 @@ use crate::{
 };
 use serde::Deserialize;
 
-use super::product::{Product, ProductQueryBuilder};
+use super::{
+    product::{Product, ProductQueryBuilder},
+    ProductsConnection,
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -60,12 +63,20 @@ impl ProductVariant {
     }
 }
 
+/// All possible queries and mutations on a `Product`.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum ProductVariantQueryType {
+    ProductVariant,
+    ProductVariants(ProductsConnection),
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ProductVariantQueryBuilder {
     id: Id,
     fields: Vec<String>,
-    query_type: String,
+    query_type: ProductVariantQueryType,
 }
 
 impl ProductVariantQueryBuilder {
@@ -73,7 +84,7 @@ impl ProductVariantQueryBuilder {
         let mut fields = Vec::new();
         fields.push("id".into());
 
-        let query_type = format!("productVariant(id: \"{}\")", id.inner());
+        let query_type = ProductVariantQueryType::ProductVariant;
 
         ProductVariantQueryBuilder {
             id,
@@ -132,7 +143,31 @@ impl ProductVariantQueryBuilder {
     pub(crate) async fn build(self, config: ShopifyConfig) -> ShopifyResult<ProductVariant> {
         let fields = self.fields.join("\n,");
 
-        let query = format!("query {{ {} {{ {} }} }}", self.query_type, fields);
+        let query = match self.query_type {
+            ProductVariantQueryType::ProductVariant => {
+                format!(
+                    "query {{ productVariant(id: \"{}\") {{ {} }} }}",
+                    self.id.inner(),
+                    fields
+                )
+            },
+
+            ProductVariantQueryType::ProductVariants(conn_type) => match conn_type {
+                ProductsConnection::First(n) => {
+                    format!(
+                        "query {{ productVariant(first: {}) {{ edges {{ node {{ {} }} }} }}  }}",
+                        n, fields
+                    )
+                }
+
+                ProductsConnection::Last(n) => {
+                    format!(
+                        "query {{ productVariant(last: {}) {{ edges {{ node {{ {} }} }} }}  }}",
+                        n, fields
+                    )
+                }
+            },
+        };
 
         let res = run_query(config, query).await?;
         match res.data {
