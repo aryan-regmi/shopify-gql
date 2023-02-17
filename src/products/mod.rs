@@ -4,7 +4,7 @@ pub(crate) mod product;
 
 pub(crate) mod product_variant;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) enum ProductsConnection {
     First(u32),

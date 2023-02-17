@@ -6,12 +6,12 @@ mod common;
 
 #[cfg(test)]
 mod tests {
-
     use crate::{
         common::{Id, Money, WeightUnit},
         products::{
             product::{Product, ProductQueryBuilder, ProductStatus},
             product_variant::{ProductVariant, ProductVariantQueryBuilder},
+            ProductsConnection,
         },
         utils::{run_query, QueryResponse, ShopifyConfig, ShopifyResult},
     };
@@ -59,8 +59,7 @@ mod tests {
             .vendor()
             .title()
             .variants(
-                1,
-                ProductVariantQueryBuilder::product_variant(Id::default())
+                ProductVariantQueryBuilder::product_variants(ProductsConnection::First(1))
                     .compare_at_price()
                     .inventory_quantity()
                     .price()

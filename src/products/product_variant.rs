@@ -2,7 +2,7 @@
 
 use crate::{
     common::{Id, Money, WeightUnit},
-    utils::{run_query, ResponseTypes, ShopifyConfig, ShopifyResult},
+    utils::{run_query, ResponseTypes, ShopifyConfig, ShopifyConnection, ShopifyResult},
 };
 use serde::Deserialize;
 
@@ -64,7 +64,7 @@ impl ProductVariant {
 }
 
 /// All possible queries and mutations on a `Product`.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) enum ProductVariantQueryType {
     ProductVariant,
@@ -85,6 +85,20 @@ impl ProductVariantQueryBuilder {
         fields.push("id".into());
 
         let query_type = ProductVariantQueryType::ProductVariant;
+
+        ProductVariantQueryBuilder {
+            id,
+            fields,
+            query_type,
+        }
+    }
+
+    pub(crate) fn product_variants(conn: ProductsConnection) -> Self {
+        let mut fields = Vec::new();
+        fields.push("id".into());
+
+        let query_type = ProductVariantQueryType::ProductVariants(conn);
+        let id = Id::default();
 
         ProductVariantQueryBuilder {
             id,
@@ -140,6 +154,10 @@ impl ProductVariantQueryBuilder {
         self.fields.as_ref()
     }
 
+    pub(crate) fn query_type(&self) -> &ProductVariantQueryType {
+        &self.query_type
+    }
+
     pub(crate) async fn build(self, config: ShopifyConfig) -> ShopifyResult<ProductVariant> {
         let fields = self.fields.join("\n,");
 
@@ -150,7 +168,7 @@ impl ProductVariantQueryBuilder {
                     self.id.inner(),
                     fields
                 )
-            },
+            }
 
             ProductVariantQueryType::ProductVariants(conn_type) => match conn_type {
                 ProductsConnection::First(n) => {

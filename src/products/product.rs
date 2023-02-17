@@ -6,7 +6,10 @@ use crate::{
 };
 use serde::Deserialize;
 
-use super::product_variant::{ProductVariant, ProductVariantQueryBuilder};
+use super::{
+    product_variant::{ProductVariant, ProductVariantQueryBuilder, ProductVariantQueryType},
+    ProductsConnection,
+};
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub(crate) enum ProductStatus {
@@ -104,16 +107,33 @@ impl ProductQueryBuilder {
         self
     }
 
-    pub(crate) fn variants(
-        mut self,
-        first: usize,
-        variants_query: ProductVariantQueryBuilder,
-    ) -> Self {
-        let var_str = format!(
-            "variants(first: {}) {{ edges {{ node {{ {} }} }} }}",
-            first,
-            variants_query.fields().join("\n,")
-        );
+    pub(crate) fn variants(mut self, variants_query: ProductVariantQueryBuilder) -> Self {
+        // Make sure the query is a `productVariants` query
+        let var_str = match variants_query.query_type() {
+            ProductVariantQueryType::ProductVariant => panic!("ERROR REPLACE THIS"),
+            ProductVariantQueryType::ProductVariants(conn) => match conn {
+                ProductsConnection::First(n) => {
+                    format!(
+                        "variants(first: {}) {{ edges {{ node {{ {} }} }} }}",
+                        n,
+                        variants_query.fields().join("\n,")
+                    )
+                }
+                ProductsConnection::Last(n) => {
+                    format!(
+                        "variants(last: {}) {{ edges {{ node {{ {} }} }} }}",
+                        n,
+                        variants_query.fields().join("\n,")
+                    )
+                }
+            },
+        };
+
+        // let var_str = format!(
+        //     "variants(first: {}) {{ edges {{ node {{ {} }} }} }}",
+        //     first,
+        //     variants_query.fields().join("\n,")
+        // );
 
         self.fields.push(var_str);
         self
