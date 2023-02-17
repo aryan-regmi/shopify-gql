@@ -89,3 +89,21 @@ impl<T> Edges<T> {
         &self.edges[idx].node
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_create_id() {
+        let id1 = Id::product("1235").unwrap();
+        assert_eq!(id1.inner(), "gid://shopify/Product/1235");
+
+        let id2 = Id::product("abcd").unwrap_err();
+
+        assert_eq!(
+            id2.to_string(),
+            "Invalid ID (abcd): The ID must only be numbers"
+        )
+    }
+}

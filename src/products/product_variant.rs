@@ -23,13 +23,6 @@ pub(crate) struct ProductVariant {
 }
 
 impl ProductVariant {
-    pub(crate) fn from_query(id: Id) -> ProductVariantQueryBuilder {
-        let mut fields = Vec::new();
-        fields.push("id".into());
-
-        ProductVariantQueryBuilder { id, fields }
-    }
-
     pub(crate) fn id(&self) -> &Id {
         &self.id
     }
@@ -72,9 +65,23 @@ impl ProductVariant {
 pub(crate) struct ProductVariantQueryBuilder {
     id: Id,
     fields: Vec<String>,
+    query_type: String,
 }
 
 impl ProductVariantQueryBuilder {
+    pub(crate) fn product_variant(id: Id) -> Self {
+        let mut fields = Vec::new();
+        fields.push("id".into());
+
+        let query_type = format!("productVariant(id: \"{}\")", id.inner());
+
+        ProductVariantQueryBuilder {
+            id,
+            fields,
+            query_type,
+        }
+    }
+
     pub(crate) fn compare_at_price(mut self) -> Self {
         self.fields.push("compareAtPrice".into());
         self
@@ -125,11 +132,7 @@ impl ProductVariantQueryBuilder {
     pub(crate) async fn build(self, config: ShopifyConfig) -> ShopifyResult<ProductVariant> {
         let fields = self.fields.join("\n,");
 
-        let query = format!(
-            "query {{ productVariant(id: \"{}\") {{ {} }} }}",
-            self.id.inner(),
-            fields
-        );
+        let query = format!("query {{ {} {{ {} }} }}", self.query_type, fields);
 
         let res = run_query(config, query).await?;
         match res.data {

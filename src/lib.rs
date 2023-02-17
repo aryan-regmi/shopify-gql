@@ -7,16 +7,15 @@ mod common;
 #[cfg(test)]
 mod tests {
 
-    use std::any::{Any, TypeId};
-
     use crate::{
         common::{Id, Money, WeightUnit},
         products::{
-            product::{Product, ProductStatus},
-            product_variant::ProductVariant,
+            product::{Product, ProductQueryBuilder, ProductStatus},
+            product_variant::{ProductVariant, ProductVariantQueryBuilder},
         },
         utils::{run_query, QueryResponse, ShopifyConfig, ShopifyResult},
     };
+    use std::any::{Any, TypeId};
 
     #[tokio::test]
     async fn test_connection() -> ShopifyResult<()> {
@@ -35,7 +34,7 @@ mod tests {
     #[tokio::test]
     async fn can_run_product_query() -> ShopifyResult<()> {
         let config = ShopifyConfig::from_env()?;
-        let prod = Product::from_query(Id::product("7343141159089")?)
+        let prod = ProductQueryBuilder::product(Id::product("7343141159089")?)
             .status()
             .vendor()
             .title()
@@ -55,17 +54,17 @@ mod tests {
     #[tokio::test]
     async fn can_run_product_query_with_variants() -> ShopifyResult<()> {
         let config = ShopifyConfig::from_env()?;
-        let prod = Product::from_query(Id::product("7343141159089")?)
+        let prod = ProductQueryBuilder::product(Id::product("7343141159089")?)
             .status()
             .vendor()
             .title()
             .variants(
                 1,
-                ProductVariant::from_query(Id::default())
+                ProductVariantQueryBuilder::product_variant(Id::default())
                     .compare_at_price()
                     .inventory_quantity()
                     .price()
-                    .product(Product::from_query(Id::default()).vendor())
+                    .product(ProductQueryBuilder::product(Id::default()).vendor())
                     .sku()
                     .title()
                     .weight()

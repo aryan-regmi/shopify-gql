@@ -36,12 +36,7 @@ pub(crate) struct Product {
 }
 
 impl Product {
-    pub(crate) fn from_query(id: Id) -> ProductQueryBuilder {
-        let mut fields = Vec::new();
-        fields.push("id".into());
-
-        ProductQueryBuilder { id, fields }
-    }
+    pub(crate) fn get_first(num_products: u32) {}
 
     pub(crate) fn id(&self) -> &Id {
         &self.id
@@ -70,9 +65,23 @@ impl Product {
 pub(crate) struct ProductQueryBuilder {
     id: Id,
     fields: Vec<String>,
+    query_type: String,
 }
 
 impl ProductQueryBuilder {
+    pub(crate) fn product(id: Id) -> Self {
+        let mut fields = Vec::new();
+        fields.push("id".into());
+
+        let query_type = format!("product(id: \"{}\")", id.inner());
+
+        ProductQueryBuilder {
+            id,
+            fields,
+            query_type,
+        }
+    }
+
     pub(crate) fn status(mut self) -> Self {
         self.fields.push("status".into());
         self
@@ -106,11 +115,7 @@ impl ProductQueryBuilder {
     pub(crate) async fn build(self, config: ShopifyConfig) -> ShopifyResult<Product> {
         let fields = self.fields.join("\n,");
 
-        let query = format!(
-            "query {{ product(id: \"{}\") {{ {} }} }}",
-            self.id.inner(),
-            fields
-        );
+        let query = format!("query {{ {} {{ {} }} }}", self.query_type, fields);
 
         let res = run_query(config, query).await?;
         match res.data {
@@ -122,24 +127,5 @@ impl ProductQueryBuilder {
 
     pub(crate) fn fields(&self) -> &[String] {
         self.fields.as_ref()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-    #[test]
-    fn can_create_id() {
-        let id1 = Id::product("1235").unwrap();
-        assert_eq!(id1.inner(), "gid://shopify/Product/1235");
-
-        let id2 = Id::product("abcd").unwrap_err();
-
-        assert_eq!(
-            id2.to_string(),
-            "Invalid ID (abcd): The ID must only be numbers"
-        )
     }
 }
