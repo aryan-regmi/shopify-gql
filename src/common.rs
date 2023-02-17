@@ -1,9 +1,12 @@
 #![allow(unused)]
 
+use serde::Deserialize;
+
 use crate::products::ProductVariant;
 
 /// A globally-unique identifier.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct Id(String);
 impl Id {
     pub(crate) fn product(id: &str) -> Self {
@@ -23,11 +26,12 @@ impl Id {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct Money(String);
 
 /// The three-letter currency codes that represent the world currencies used in stores.
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 enum CurrencyCode {
     /// Canadian Dollars (CAD).
     CAD,
@@ -39,7 +43,8 @@ enum CurrencyCode {
     USD,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct MoneyV2 {
     /// Decimal money amount.
     amount: f64,
@@ -50,7 +55,8 @@ pub(crate) struct MoneyV2 {
 
 /// Represents the goods available to be shipped to a customer.
 /// It holds essential information about the goods, including SKU and whether it is tracked.
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct InventoryItem {
     /// A globally-unique identifier.
     id: Id,
@@ -67,17 +73,17 @@ pub(crate) struct InventoryItem {
     variant: Box<ProductVariant>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub(crate) enum WeightUnit {
     /// Metric system unit of mass.
-    Grams,
+    GRAMS,
 
     /// 1 kilogram equals 1000 grams.
-    Kilograms,
+    KILOGRAMS,
 
     /// Imperial system unit of mass.
-    Ounces,
+    OUNCES,
 
     /// 1 pound equals 16 ounces.
-    Pounds,
+    POUNDS,
 }

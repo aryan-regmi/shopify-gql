@@ -1,10 +1,13 @@
 #![allow(unused)]
 
+use serde::Deserialize;
+
 use super::Product;
 use crate::common::{Id, InventoryItem, Money, WeightUnit};
 
 /// Represents a product variant.
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ProductVariant {
     /// A globally-unique identifier.
     id: Id,
