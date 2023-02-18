@@ -155,7 +155,6 @@ impl ProductQueryBuilder {
     pub(crate) fn variants(mut self, variants_query: ProductVariantQueryBuilder) -> Self {
         // Make sure the query is a `productVariants` query
         let var_str = match variants_query.query_type() {
-            ProductVariantQueryType::ProductVariant => panic!("ERROR REPLACE THIS"),
             ProductVariantQueryType::ProductVariants(conn) => match conn {
                 ProductsConnection::First(n) => {
                     format!(
@@ -172,13 +171,9 @@ impl ProductQueryBuilder {
                     )
                 }
             },
-        };
 
-        // let var_str = format!(
-        //     "variants(first: {}) {{ edges {{ node {{ {} }} }} }}",
-        //     first,
-        //     variants_query.fields().join("\n,")
-        // );
+            _ => panic!("ERROR REPLACE THIS"),
+        };
 
         self.fields.push(var_str);
         self

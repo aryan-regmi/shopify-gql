@@ -71,6 +71,7 @@ impl ProductVariant {
 pub(crate) enum ProductVariantQueryType {
     ProductVariant,
     ProductVariants(ProductsConnection),
+    ProductVariantUpdate(Id),
 }
 
 #[derive(Debug, Deserialize)]
@@ -78,6 +79,7 @@ pub(crate) enum ProductVariantQueryType {
 pub(crate) struct ProductVariantQueryBuilder {
     id: Id,
     fields: Vec<String>,
+    inputs: Option<Vec<String>>,
     query_type: ProductVariantQueryType,
 }
 
@@ -91,6 +93,7 @@ impl ProductVariantQueryBuilder {
         ProductVariantQueryBuilder {
             id,
             fields,
+            inputs: None,
             query_type,
         }
     }
@@ -105,6 +108,28 @@ impl ProductVariantQueryBuilder {
         ProductVariantQueryBuilder {
             id,
             fields,
+            inputs: None,
+            query_type,
+        }
+    }
+
+    ///**NOTE:** Only call the `update_` methods on the returned builder.
+    pub(crate) fn product_variant_update(id: Id) -> Self {
+        let mut fields = Vec::new();
+        fields.push("id".into());
+
+        let mut inputs = Some(Vec::new());
+        inputs
+            .as_mut()
+            .unwrap()
+            .push(format!("id: \"{}\"", id.inner()));
+
+        let query_type = ProductVariantQueryType::ProductVariantUpdate(id.clone());
+
+        ProductVariantQueryBuilder {
+            id,
+            fields,
+            inputs,
             query_type,
         }
     }
@@ -114,13 +139,47 @@ impl ProductVariantQueryBuilder {
         self
     }
 
+    pub(crate) fn update_compare_at_price(mut self, compare_at_price: Money) -> Self {
+        let compare_at_price = format!("compareAtPrice: {}", compare_at_price.0.to_string());
+
+        self.inputs.as_mut().unwrap().push(compare_at_price);
+        self
+    }
+
     pub(crate) fn inventory_quantity(mut self) -> Self {
         self.fields.push("inventoryQuantity".into());
         self
     }
 
+    // TODO: Update `Id` to return location_id, change `location_id` to Id from &str
+    pub(crate) fn update_inventory_quantities(
+        mut self,
+        inventory_quantities: Vec<(i32, Id)>,
+    ) -> Self {
+        let mut body_str = String::new();
+        for v in inventory_quantities {
+            body_str.push_str(&format!(
+                "{{ availableQuantity: {}, locationId: \"{}\" }},",
+                v.0,
+                v.1.inner()
+            ));
+        }
+
+        let inventory_quantity = format!("inventoryQuantities: [{}]", body_str);
+
+        self.inputs.as_mut().unwrap().push(inventory_quantity);
+        self
+    }
+
     pub(crate) fn price(mut self) -> Self {
         self.fields.push("price".into());
+        self
+    }
+
+    pub(crate) fn update_price(mut self, price: Money) -> Self {
+        let price = format!("price: {}", price.0.to_string());
+
+        self.inputs.as_mut().unwrap().push(price);
         self
     }
 
@@ -137,6 +196,13 @@ impl ProductVariantQueryBuilder {
         self
     }
 
+    pub(crate) fn update_sku(mut self, sku: &str) -> Self {
+        let sku = format!("sku: \"{}\"", sku);
+
+        self.inputs.as_mut().unwrap().push(sku);
+        self
+    }
+
     pub(crate) fn title(mut self) -> Self {
         self.fields.push("title".into());
         self
@@ -147,8 +213,22 @@ impl ProductVariantQueryBuilder {
         self
     }
 
+    pub(crate) fn update_weight(mut self, weight: f64) -> Self {
+        let weight = format!("weight: {}", weight);
+
+        self.inputs.as_mut().unwrap().push(weight);
+        self
+    }
+
     pub(crate) fn weight_unit(mut self) -> Self {
         self.fields.push("weightUnit".into());
+        self
+    }
+
+    pub(crate) fn update_weight_unit(mut self, weight_unit: WeightUnit) -> Self {
+        let weight_unit = format!("weightUnit: {:?}", weight_unit);
+
+        self.inputs.as_mut().unwrap().push(weight_unit);
         self
     }
 
@@ -187,11 +267,22 @@ impl ProductVariantQueryBuilder {
                     )
                 }
             },
+
+            // TODO: Handle user errors
+            ProductVariantQueryType::ProductVariantUpdate(id) => {
+                format!(
+                    "mutation {{ productVariantUpdate(input: {{ {} }}) {{ productVariant {{ {} }} }}  }}",
+                    self.inputs.unwrap().join("\n,"),
+                    fields
+                )
+            }
         };
 
         let res = run_query(config, query).await?;
         match res.data {
             ResponseTypes::ProductVariant(v) => Ok(v),
+
+            ResponseTypes::ProductVariantUpdate { product_variant } => Ok(product_variant),
 
             _ => Err(ShopifyGqlError::ResponseError(format!("{:?}", res))),
         }

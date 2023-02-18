@@ -39,6 +39,15 @@ impl Id {
         Ok(Self(format!("gid://shopify/ProductVariant/{}", id)))
     }
 
+    pub(crate) fn location(id: &str) -> ShopifyResult<Self> {
+        // Validate input (must be numbers only)
+        if !Id::is_numeric(id) {
+            return Err(ShopifyGqlError::InvalidId(id.into()));
+        }
+
+        Ok(Self(format!("gid://shopify/Location/{}", id)))
+    }
+
     pub(crate) fn inner(&self) -> &String {
         &self.0
     }

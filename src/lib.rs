@@ -9,8 +9,8 @@ mod tests {
     use crate::{
         common::{Id, Money, WeightUnit},
         products::{
-            product::{Product, ProductQueryBuilder, ProductStatus},
-            product_variant::{ProductVariant, ProductVariantQueryBuilder},
+            product::{ProductQueryBuilder, ProductStatus},
+            product_variant::ProductVariantQueryBuilder,
             ProductsConnection,
         },
         utils::{run_query, QueryResponse, ShopifyConfig, ShopifyResult},
@@ -104,6 +104,27 @@ mod tests {
             .await?;
 
         assert_eq!(prod.id(), &Id::product("7343141159089")?);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn can_update_product_variant() -> ShopifyResult<()> {
+        let config = ShopifyConfig::from_env()?;
+
+        let prod = ProductVariantQueryBuilder::product_variant_update(Id::product_variant(
+            "42235355267249",
+        )?)
+        .update_sku("000000")
+        .update_price(Money(450.99))
+        .update_weight(100.)
+        .update_weight_unit(WeightUnit::OUNCES)
+        .update_compare_at_price(Money(150.0))
+        .update_inventory_quantities(vec![(0, Id::location("61444686001")?)])
+        .build(config)
+        .await?;
+
+        assert_eq!(prod.id(), &Id::product_variant("42235355267249")?);
 
         Ok(())
     }

@@ -95,9 +95,17 @@ impl ShopifyConfig {
 #[serde(rename_all = "camelCase")]
 pub(crate) enum ResponseTypes {
     Product(Product),
+
     ProductVariant(ProductVariant),
 
-    ProductUpdate { product: Product },
+    ProductUpdate {
+        product: Product,
+    },
+
+    #[serde(rename_all = "camelCase")]
+    ProductVariantUpdate {
+        product_variant: ProductVariant,
+    },
 }
 
 #[derive(Debug, Deserialize)]
