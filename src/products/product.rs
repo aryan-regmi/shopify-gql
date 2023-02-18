@@ -2,7 +2,7 @@
 
 use crate::{
     common::{Edges, Id, Node},
-    utils::{run_query, ResponseTypes, ShopifyConfig, ShopifyResult},
+    utils::{run_query, ResponseTypes, ShopifyConfig, ShopifyGqlError, ShopifyResult},
 };
 use serde::Deserialize;
 
@@ -67,6 +67,7 @@ impl Product {
 #[serde(rename_all = "camelCase")]
 pub(crate) enum ProductQueryType {
     Product,
+    ProductUpdate(Id),
 }
 
 // NOTE: This needs to be updated anytime a new field is added to `Product`.
@@ -75,6 +76,7 @@ pub(crate) enum ProductQueryType {
 pub(crate) struct ProductQueryBuilder {
     id: Id,
     fields: Vec<String>,
+    inputs: Option<Vec<String>>,
     query_type: ProductQueryType,
 }
 
@@ -88,6 +90,28 @@ impl ProductQueryBuilder {
         ProductQueryBuilder {
             id,
             fields,
+            inputs: None,
+            query_type,
+        }
+    }
+
+    ///**NOTE:** Only call the `update_` methods on the returned builder.
+    pub(crate) fn product_update(id: Id) -> Self {
+        let mut fields = Vec::new();
+        fields.push("id".into());
+
+        let mut inputs = Some(Vec::new());
+        inputs
+            .as_mut()
+            .unwrap()
+            .push(format!("id: \"{}\"", id.inner()));
+
+        let query_type = ProductQueryType::ProductUpdate(id.clone());
+
+        ProductQueryBuilder {
+            id,
+            fields,
+            inputs,
             query_type,
         }
     }
@@ -97,13 +121,34 @@ impl ProductQueryBuilder {
         self
     }
 
+    pub(crate) fn update_status(mut self, status: ProductStatus) -> Self {
+        let status = format!("status: {:?}", status);
+
+        self.inputs.as_mut().unwrap().push(status);
+        self
+    }
+
     pub(crate) fn vendor(mut self) -> Self {
         self.fields.push("vendor".into());
         self
     }
 
+    pub(crate) fn update_vendor(mut self, vendor: &str) -> Self {
+        let vendor = format!("vendor: {:?}", vendor);
+
+        self.inputs.as_mut().unwrap().push(vendor);
+        self
+    }
+
     pub(crate) fn title(mut self) -> Self {
         self.fields.push("title".into());
+        self
+    }
+
+    pub(crate) fn update_title(mut self, title: &str) -> Self {
+        let title = format!("title: {:?}", title);
+
+        self.inputs.as_mut().unwrap().push(title);
         self
     }
 
@@ -139,6 +184,10 @@ impl ProductQueryBuilder {
         self
     }
 
+    pub(crate) fn fields(&self) -> &[String] {
+        self.fields.as_ref()
+    }
+
     pub(crate) async fn build(self, config: ShopifyConfig) -> ShopifyResult<Product> {
         let fields = self.fields.join("\n,");
 
@@ -150,17 +199,24 @@ impl ProductQueryBuilder {
                     fields
                 )
             }
+
+            // TODO: Handle user errors
+            ProductQueryType::ProductUpdate(id) => {
+                format!(
+                    "mutation {{ productUpdate(input: {{ {} }}) {{ product {{ {} }} }}  }}",
+                    self.inputs.unwrap().join("\n,"),
+                    fields
+                )
+            }
         };
 
         let res = run_query(config, query).await?;
         match res.data {
             ResponseTypes::Product(p) => Ok(p),
 
-            _ => unreachable!(), // FIX: Replace this with an Error
-        }
-    }
+            ResponseTypes::ProductUpdate { product } => Ok(product),
 
-    pub(crate) fn fields(&self) -> &[String] {
-        self.fields.as_ref()
+            _ => Err(ShopifyGqlError::ResponseError(format!("{:?}", res))),
+        }
     }
 }

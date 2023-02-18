@@ -2,7 +2,9 @@
 
 use crate::{
     common::{Id, Money, WeightUnit},
-    utils::{run_query, ResponseTypes, ShopifyConfig, ShopifyConnection, ShopifyResult},
+    utils::{
+        run_query, ResponseTypes, ShopifyConfig, ShopifyConnection, ShopifyGqlError, ShopifyResult,
+    },
 };
 use serde::Deserialize;
 
@@ -191,7 +193,7 @@ impl ProductVariantQueryBuilder {
         match res.data {
             ResponseTypes::ProductVariant(v) => Ok(v),
 
-            _ => unreachable!(), // FIX: Replace this with an Error
+            _ => Err(ShopifyGqlError::ResponseError(format!("{:?}", res))),
         }
     }
 }

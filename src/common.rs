@@ -3,7 +3,7 @@
 use crate::utils::{ShopifyGqlError, ShopifyResult};
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize, PartialEq, Default)]
+#[derive(Debug, Deserialize, PartialEq, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Id(String);
 

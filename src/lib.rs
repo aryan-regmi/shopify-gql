@@ -44,9 +44,9 @@ mod tests {
         dbg!(&prod);
 
         assert_eq!(prod.id(), &Id::product("7343141159089")?);
-        assert_eq!(prod.status().unwrap(), &ProductStatus::ACTIVE);
-        assert_eq!(prod.vendor().unwrap(), "NTP Dev Env");
-        assert_eq!(prod.title().unwrap(), "Test Prod 1");
+        assert_eq!(prod.status().unwrap(), &ProductStatus::DRAFT);
+        assert_eq!(prod.vendor().unwrap(), "TEST");
+        assert_eq!(prod.title().unwrap(), "MY TITLE");
 
         Ok(())
     }
@@ -75,9 +75,9 @@ mod tests {
         dbg!(&prod);
 
         assert_eq!(prod.id(), &Id::product("7343141159089")?);
-        assert_eq!(prod.status().unwrap(), &ProductStatus::ACTIVE);
-        assert_eq!(prod.vendor().unwrap(), "NTP Dev Env");
-        assert_eq!(prod.title().unwrap(), "Test Prod 1");
+        assert_eq!(prod.status().unwrap(), &ProductStatus::DRAFT);
+        assert_eq!(prod.vendor().unwrap(), "TEST");
+        assert_eq!(prod.title().unwrap(), "MY TITLE");
 
         let var = prod.variants().unwrap().get_node(0);
         assert_eq!(var.id(), &Id::product_variant("42235355201713")?);
@@ -88,6 +88,22 @@ mod tests {
         assert_eq!(var.title(), Some(&"Red".into()));
         assert_eq!(var.weight(), Some(10.0));
         assert_eq!(var.weight_unit(), Some(&WeightUnit::POUNDS));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn can_update_product() -> ShopifyResult<()> {
+        let config = ShopifyConfig::from_env()?;
+
+        let prod = ProductQueryBuilder::product_update(Id::product("7343141159089")?)
+            .update_title("MY TITLE")
+            .update_vendor("TEST")
+            .update_status(ProductStatus::DRAFT)
+            .build(config)
+            .await?;
+
+        assert_eq!(prod.id(), &Id::product("7343141159089")?);
 
         Ok(())
     }

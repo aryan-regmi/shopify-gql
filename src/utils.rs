@@ -48,7 +48,6 @@ pub(crate) struct ShopifyConfig {
     /// The API token used for authentication.
     api_token: String,
 
-    /// TODO: The actual connection to the API endpoint.
     connection: Option<ShopifyConnection>,
 }
 
@@ -97,6 +96,8 @@ impl ShopifyConfig {
 pub(crate) enum ResponseTypes {
     Product(Product),
     ProductVariant(ProductVariant),
+
+    ProductUpdate { product: Product },
 }
 
 #[derive(Debug, Deserialize)]
@@ -105,6 +106,7 @@ pub(crate) struct QueryResponse {
     pub(crate) data: ResponseTypes,
 }
 
+// TODO: Handle Shopify errors
 pub(crate) async fn run_query(
     config: ShopifyConfig,
     query: String,
@@ -118,7 +120,8 @@ pub(crate) async fn run_query(
     let url = config.api_url;
 
     let res = client.post(url).headers(headers).body(query).send().await?;
-    // dbg!(res.text().await?);
+    // let t: serde_json::Value = res.json().await?;
+    // dbg!(t);
     // todo!()
 
     let ret: Result<QueryResponse, _> = res.json().await;
