@@ -1,10 +1,12 @@
 #![allow(unused)]
 
+use std::{collections::HashMap, marker::PhantomData};
+
 use crate::{
     common::{Edges, Id, Node},
     utils::{run_query, ResponseTypes, ShopifyConfig, ShopifyGqlError, ShopifyResult},
 };
-use serde::Deserialize;
+use serde::{de::IntoDeserializer, Deserialize};
 
 use super::{
     product_variant::{ProductVariant, ProductVariantQueryBuilder, ProductVariantQueryType},
@@ -39,8 +41,6 @@ pub(crate) struct Product {
 }
 
 impl Product {
-    pub(crate) fn get_first(num_products: u32) {}
-
     pub(crate) fn id(&self) -> &Id {
         &self.id
     }
@@ -75,15 +75,15 @@ pub(crate) enum ProductQueryType {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ProductQueryBuilder {
     id: Id,
-    fields: Vec<String>,
-    inputs: Option<Vec<String>>,
+    fields: HashMap<String, PhantomData<u8>>,
+    inputs: Option<HashMap<String, PhantomData<u8>>>,
     query_type: ProductQueryType,
 }
 
 impl ProductQueryBuilder {
     pub(crate) fn product(id: Id) -> Self {
-        let mut fields = Vec::new();
-        fields.push("id".into());
+        let mut fields = HashMap::new();
+        fields.insert("id".into(), PhantomData);
 
         let query_type = ProductQueryType::Product;
 
@@ -97,14 +97,14 @@ impl ProductQueryBuilder {
 
     ///**NOTE:** Only call the `update_` methods on the returned builder.
     pub(crate) fn product_update(id: Id) -> Self {
-        let mut fields = Vec::new();
-        fields.push("id".into());
+        let mut fields = HashMap::new();
+        fields.insert("id".into(), PhantomData);
 
-        let mut inputs = Some(Vec::new());
+        let mut inputs = Some(HashMap::new());
         inputs
             .as_mut()
             .unwrap()
-            .push(format!("id: \"{}\"", id.inner()));
+            .insert(format!("id: \"{}\"", id.inner()), PhantomData);
 
         let query_type = ProductQueryType::ProductUpdate(id.clone());
 
@@ -117,38 +117,38 @@ impl ProductQueryBuilder {
     }
 
     pub(crate) fn status(mut self) -> Self {
-        self.fields.push("status".into());
+        self.fields.insert("status".into(), PhantomData);
         self
     }
 
     pub(crate) fn update_status(mut self, status: ProductStatus) -> Self {
         let status = format!("status: {:?}", status);
 
-        self.inputs.as_mut().unwrap().push(status);
+        self.inputs.as_mut().unwrap().insert(status, PhantomData);
         self
     }
 
     pub(crate) fn vendor(mut self) -> Self {
-        self.fields.push("vendor".into());
+        self.fields.insert("vendor".into(), PhantomData);
         self
     }
 
     pub(crate) fn update_vendor(mut self, vendor: &str) -> Self {
         let vendor = format!("vendor: {:?}", vendor);
 
-        self.inputs.as_mut().unwrap().push(vendor);
+        self.inputs.as_mut().unwrap().insert(vendor, PhantomData);
         self
     }
 
     pub(crate) fn title(mut self) -> Self {
-        self.fields.push("title".into());
+        self.fields.insert("title".into(), PhantomData);
         self
     }
 
     pub(crate) fn update_title(mut self, title: &str) -> Self {
         let title = format!("title: {:?}", title);
 
-        self.inputs.as_mut().unwrap().push(title);
+        self.inputs.as_mut().unwrap().insert(title, PhantomData);
         self
     }
 
@@ -175,18 +175,25 @@ impl ProductQueryBuilder {
             _ => panic!("ERROR REPLACE THIS"),
         };
 
-        self.fields.push(var_str);
+        self.fields.insert(var_str, PhantomData);
         self
     }
 
-    pub(crate) fn fields(&self) -> &[String] {
-        self.fields.as_ref()
+    pub(crate) fn fields(&self) -> Vec<&str> {
+        self.fields.keys().map(|v| v.as_str()).collect()
+    }
+
+    pub(crate) fn inputs(&self) -> Option<Vec<&str>> {
+        self.inputs
+            .as_ref()
+            .map_or(None, |m| Some(m.keys().map(|v| v.as_str()).collect()))
     }
 
     pub(crate) async fn build(self, config: ShopifyConfig) -> ShopifyResult<Product> {
-        let fields = self.fields.join("\n,");
+        let fields = self.fields().join("\n,");
+        let inputs = self.inputs();
 
-        let query = match self.query_type {
+        let query = match &self.query_type {
             ProductQueryType::Product => {
                 format!(
                     "query {{ product(id: \"{}\") {{ {} }} }}",
@@ -199,7 +206,7 @@ impl ProductQueryBuilder {
             ProductQueryType::ProductUpdate(id) => {
                 format!(
                     "mutation {{ productUpdate(input: {{ {} }}) {{ product {{ {} }} }}  }}",
-                    self.inputs.unwrap().join("\n,"),
+                    inputs.unwrap().join("\n,"),
                     fields
                 )
             }

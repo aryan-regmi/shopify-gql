@@ -9,7 +9,10 @@ use serde::Deserialize;
 use std::env::{self, VarError};
 use thiserror::Error;
 
-use crate::products::{product::Product, product_variant::ProductVariant};
+use crate::{
+    bulk_mutations::BulkOperation,
+    products::{product::Product, product_variant::ProductVariant},
+};
 
 #[derive(Debug, Error)]
 pub(crate) enum ShopifyGqlError {
@@ -105,6 +108,11 @@ pub(crate) enum ResponseTypes {
     #[serde(rename_all = "camelCase")]
     ProductVariantUpdate {
         product_variant: ProductVariant,
+    },
+
+    #[serde(rename_all = "camelCase")]
+    BulkOperationRunQuery {
+        bulk_operation: BulkOperation,
     },
 }
 

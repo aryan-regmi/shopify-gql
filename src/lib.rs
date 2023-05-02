@@ -4,6 +4,8 @@ mod utils;
 
 mod common;
 
+mod bulk_mutations;
+
 #[cfg(test)]
 mod tests {
     use crate::{
@@ -120,11 +122,18 @@ mod tests {
         .update_weight(100.)
         .update_weight_unit(WeightUnit::OUNCES)
         .update_compare_at_price(Money(150.0))
-        .update_inventory_quantities(vec![(0, Id::location("61444686001")?)])
+        .sku()
+        .price()
+        .weight()
+        .weight_unit()
+        .compare_at_price()
+        .inventory_quantity()
         .build(config)
         .await?;
 
         assert_eq!(prod.id(), &Id::product_variant("42235355267249")?);
+
+        dbg!(prod);
 
         Ok(())
     }
