@@ -69,6 +69,7 @@ impl TryFrom<String> for Money {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Deserialize, PartialEq)]
 pub(crate) enum WeightUnit {
     GRAMS,

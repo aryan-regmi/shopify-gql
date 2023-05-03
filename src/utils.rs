@@ -122,7 +122,6 @@ pub(crate) struct QueryResponse {
     pub(crate) data: ResponseTypes,
 }
 
-// TODO: Handle Shopify errors
 pub(crate) async fn run_query(
     config: ShopifyConfig,
     query: String,

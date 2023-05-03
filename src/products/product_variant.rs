@@ -15,6 +15,7 @@ use super::{
     ProductsConnection,
 };
 
+// NOTE: Need to update `ProductVariantQueryBuilder` anytime a field is added/changed.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ProductVariant {
@@ -68,6 +69,7 @@ impl ProductVariant {
 }
 
 /// All possible queries and mutations on a `Product`.
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) enum ProductVariantQueryType {
@@ -115,7 +117,6 @@ impl ProductVariantQueryBuilder {
         }
     }
 
-    ///**NOTE:** Only call the `update_` methods on the returned builder.
     pub(crate) fn product_variant_update(id: Id) -> Self {
         let mut fields = HashMap::new();
         fields.insert("id".into(), PhantomData);
@@ -247,7 +248,7 @@ impl ProductVariantQueryBuilder {
     pub(crate) fn inputs(&self) -> Option<Vec<&str>> {
         self.inputs
             .as_ref()
-            .map_or(None, |m| Some(m.keys().map(|v| v.as_str()).collect()))
+            .map(|m| m.keys().map(|v| v.as_str()).collect())
     }
 
     pub(crate) fn query_type(&self) -> &ProductVariantQueryType {

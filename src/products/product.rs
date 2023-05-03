@@ -13,6 +13,7 @@ use super::{
     ProductsConnection,
 };
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Deserialize, PartialEq)]
 pub(crate) enum ProductStatus {
     /// The product is ready to sell and can be published to sales channels and apps.
@@ -95,7 +96,6 @@ impl ProductQueryBuilder {
         }
     }
 
-    ///**NOTE:** Only call the `update_` methods on the returned builder.
     pub(crate) fn product_update(id: Id) -> Self {
         let mut fields = HashMap::new();
         fields.insert("id".into(), PhantomData);
@@ -200,7 +200,7 @@ impl ProductQueryBuilder {
     pub(crate) fn inputs(&self) -> Option<Vec<&str>> {
         self.inputs
             .as_ref()
-            .map_or(None, |m| Some(m.keys().map(|v| v.as_str()).collect()))
+            .map(|m| m.keys().map(|v| v.as_str()).collect())
     }
 
     pub(crate) async fn build(self, config: ShopifyConfig) -> ShopifyResult<Product> {
