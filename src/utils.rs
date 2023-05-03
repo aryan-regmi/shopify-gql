@@ -129,7 +129,7 @@ pub(crate) async fn run_query(
 ) -> ShopifyResult<QueryResponse> {
     let conn = match config.connection {
         Some(conn) => conn,
-        None => unreachable!(),
+        None => unreachable!("Invalid config"),
     };
     let client = conn.client;
     let headers = conn.headers;
@@ -141,13 +141,12 @@ pub(crate) async fn run_query(
     // todo!()
 
     let ret: Result<QueryResponse, _> = res.json().await;
-    let ret = match ret {
+
+    match ret {
         Ok(r) => Ok(r),
         Err(e) => Err(ShopifyGqlError::ResponseError(format!(
             "Unable to parse response: {}",
             e
         ))),
-    };
-
-    ret
+    }
 }

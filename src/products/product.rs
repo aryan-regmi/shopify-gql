@@ -122,10 +122,14 @@ impl ProductQueryBuilder {
     }
 
     pub(crate) fn update_status(mut self, status: ProductStatus) -> Self {
-        let status = format!("status: {:?}", status);
+        if let ProductQueryType::ProductUpdate(_) = self.query_type {
+            let status = format!("status: {:?}", status);
 
-        self.inputs.as_mut().unwrap().insert(status, PhantomData);
-        self
+            self.inputs.as_mut().unwrap().insert(status, PhantomData);
+            return self;
+        }
+
+        panic!("`update_status` can only be called on a query builder created by the `product_update` function.")
     }
 
     pub(crate) fn vendor(mut self) -> Self {
@@ -134,10 +138,14 @@ impl ProductQueryBuilder {
     }
 
     pub(crate) fn update_vendor(mut self, vendor: &str) -> Self {
-        let vendor = format!("vendor: {:?}", vendor);
+        if let ProductQueryType::ProductUpdate(_) = self.query_type {
+            let vendor = format!("vendor: {:?}", vendor);
 
-        self.inputs.as_mut().unwrap().insert(vendor, PhantomData);
-        self
+            self.inputs.as_mut().unwrap().insert(vendor, PhantomData);
+            return self;
+        }
+
+        panic!("`update_vendor` can only be called on a query builder created by the `product_update` function.")
     }
 
     pub(crate) fn title(mut self) -> Self {
@@ -146,10 +154,14 @@ impl ProductQueryBuilder {
     }
 
     pub(crate) fn update_title(mut self, title: &str) -> Self {
-        let title = format!("title: {:?}", title);
+        if let ProductQueryType::ProductUpdate(_) = self.query_type {
+            let title = format!("title: {:?}", title);
 
-        self.inputs.as_mut().unwrap().insert(title, PhantomData);
-        self
+            self.inputs.as_mut().unwrap().insert(title, PhantomData);
+            return self;
+        }
+
+        panic!("`update_title` can only be called on a query builder created by the `product_update` function.")
     }
 
     pub(crate) fn variants(mut self, variants_query: ProductVariantQueryBuilder) -> Self {
@@ -172,7 +184,9 @@ impl ProductQueryBuilder {
                 }
             },
 
-            _ => panic!("ERROR REPLACE THIS"),
+            _ => panic!(
+                "`variants_query` must be of type `ProductVariantQueryType::ProductVariants(_)`"
+            ),
         };
 
         self.fields.insert(var_str, PhantomData);
