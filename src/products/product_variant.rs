@@ -1,4 +1,4 @@
-#![allow(unused)]
+#![allow(unused)] // FIXME: Remove
 
 use std::{collections::HashMap, marker::PhantomData};
 
@@ -142,13 +142,17 @@ impl ProductVariantQueryBuilder {
     }
 
     pub(crate) fn update_compare_at_price(mut self, compare_at_price: Money) -> Self {
-        let compare_at_price = format!("compareAtPrice: {}", compare_at_price.0.to_string());
+        if let ProductVariantQueryType::ProductVariantUpdate(_) = self.query_type {
+            let compare_at_price = format!("compareAtPrice: {}", compare_at_price.0);
 
-        self.inputs
-            .as_mut()
-            .unwrap()
-            .insert(compare_at_price, PhantomData);
-        self
+            self.inputs
+                .as_mut()
+                .unwrap()
+                .insert(compare_at_price, PhantomData);
+            return self;
+        }
+
+        panic!("`update_compare_at_price` can only be called on a query builder created by the `product_variant_update` function.")
     }
 
     pub(crate) fn inventory_quantity(mut self) -> Self {
@@ -162,10 +166,14 @@ impl ProductVariantQueryBuilder {
     }
 
     pub(crate) fn update_price(mut self, price: Money) -> Self {
-        let price = format!("price: {}", price.0.to_string());
+        if let ProductVariantQueryType::ProductVariantUpdate(_) = self.query_type {
+            let price = format!("price: {}", price.0);
 
-        self.inputs.as_mut().unwrap().insert(price, PhantomData);
-        self
+            self.inputs.as_mut().unwrap().insert(price, PhantomData);
+            return self;
+        }
+
+        panic!("`update_price` can only be called on a query builder created by the `product_variant_update` function.")
     }
 
     /// NOTE: Calling `.variants()` on the `product_query` will cause an infinte cycle.
@@ -182,10 +190,14 @@ impl ProductVariantQueryBuilder {
     }
 
     pub(crate) fn update_sku(mut self, sku: &str) -> Self {
-        let sku = format!("sku: \"{}\"", sku);
+        if let ProductVariantQueryType::ProductVariantUpdate(_) = self.query_type {
+            let sku = format!("sku: \"{}\"", sku);
 
-        self.inputs.as_mut().unwrap().insert(sku, PhantomData);
-        self
+            self.inputs.as_mut().unwrap().insert(sku, PhantomData);
+            return self;
+        }
+
+        panic!("`update_sku` can only be called on a query builder created by the `product_variant_update` function.")
     }
 
     pub(crate) fn title(mut self) -> Self {
@@ -199,10 +211,14 @@ impl ProductVariantQueryBuilder {
     }
 
     pub(crate) fn update_weight(mut self, weight: f64) -> Self {
-        let weight = format!("weight: {}", weight);
+        if let ProductVariantQueryType::ProductVariantUpdate(_) = self.query_type {
+            let weight = format!("weight: {}", weight);
 
-        self.inputs.as_mut().unwrap().insert(weight, PhantomData);
-        self
+            self.inputs.as_mut().unwrap().insert(weight, PhantomData);
+            return self;
+        }
+
+        panic!("`update_weight` can only be called on a query builder created by the `product_variant_update` function.")
     }
 
     pub(crate) fn weight_unit(mut self) -> Self {
@@ -211,13 +227,17 @@ impl ProductVariantQueryBuilder {
     }
 
     pub(crate) fn update_weight_unit(mut self, weight_unit: WeightUnit) -> Self {
-        let weight_unit = format!("weightUnit: {:?}", weight_unit);
+        if let ProductVariantQueryType::ProductVariantUpdate(_) = self.query_type {
+            let weight_unit = format!("weightUnit: {:?}", weight_unit);
 
-        self.inputs
-            .as_mut()
-            .unwrap()
-            .insert(weight_unit, PhantomData);
-        self
+            self.inputs
+                .as_mut()
+                .unwrap()
+                .insert(weight_unit, PhantomData);
+            return self;
+        }
+
+        panic!("`update_weight_unit` can only be called on a query builder created by the `product_variant_update` function.")
     }
 
     pub(crate) fn fields(&self) -> Vec<&str> {
